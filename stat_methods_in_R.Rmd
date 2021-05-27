@@ -1,0 +1,400 @@
+---
+title: "Statistical Methods in R"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+## Agenda
+
+- review of hypothesis testing and confidence intervals
+- odds ratios
+- linear model basics
+- logisitic regression basics
+- survival analysis basics
+
+That's a lot for 2 hours!
+
+## Hypothesis testing
+
+Usually used to assess if two statistical measures are likely different, or if some statistic is likely different from 0.
+
+Example: I randomly sample 100 UVA females and 100 UVA males and ask if they floss.
+
+- Female: 34/100 = 0.34
+- Male: 28/100 = 0.28
+
+How likely are we to observe a difference as big or bigger than 0.06 if there really is no difference in the entire population?
+
+The answer is a _p-value_.
+
+## Running the test in R
+
+```{r echo=TRUE}
+prop.test(x = c(34, 28), n = c(100, 100))
+```
+
+## Interpreting the test results
+
+The p-value is about 0.44. If the proportion of males and females who floss truly was equal, this result is not unexpected. There's about a 44% chance of getting two proportions as different as these (or more different).
+
+We could say, "with the current sample size the data were unable to overcome the supposition of no difference in the proportions." 
+
+The 95% confidence interval is [-.07, 0.20]. We're not sure of the magnitude or direction of the difference.
+
+More about confidence intervals shortly.
+
+## More hypothesis tests
+
+Base R has a number of hypothesis test functions. Here are a few:
+
+- `prop.test`: compare two proportions
+- `t.test`: compare two means
+- `chisq.test`: association between categorical variables
+- `cor.test`: association between numeric variables
+- `wilcox.test`: compare rank of means
+
+Much could be said about the theory and assumptions of these tests. We don't have time to do that. Besides most research questions require more sophisticated statistical approaches that allow us to incorporate multiple variables or predictors. 
+
+However two quick demos with some semi-realistic data.
+
+## Two examples
+
+The following reads in a data frame containing information on chronic kidney disease. Downloaded from the UCI Machine Learning Repository. https://archive.ics.uci.edu/ml/datasets/chronic_kidney_disease
+
+An "rds" file is a single R object. It's an efficient way to save R data frames. See this script for how I downloaded and processed the file.
+
+The data frame has one record per subject. The `class` column tells us whether the subject has chronic kidney disease or not
+
+```{r}
+kd <- readRDS('kidney_disease.rds')
+table(kd$class)
+```
+
+
+### T-test
+
+The `wbcc` column provides white blood cell count. Is there a difference in mean white blood cell count between subjects with and without chronic kidney disease? It looks like there is.
+
+```{r}
+tapply(kd$wbcc, kd$class, summary)
+```
+
+We can investigate with a t-test.
+
+```{r}
+t.test(wbcc ~ class, data = kd)
+```
+
+Null: no difference in mean wbcc
+Alternative: some difference
+
+We have good evidence that mean wbcc is higher in subjects with chronic kidney disease. The 95% CI on the difference in means suggests the difference is at least 714.
+
+### Correlation test
+
+Is there a linear association between Hemoglobin and Red blood cell count for subjects with chronic kidney disease? It sure looks like it.
+
+```{r}
+plot(hemo ~ rbcc, data = kd, subset = class == "ckd")
+```
+
+We can summarize linear relationships with correlation.
+
+```{r}
+cor.test(~ rbcc + hemo, data = d, subset = class == "ckd")
+```
+
+It appears the correlation is somewhere between 0.70 and 0.84. The hypothesis test is comparing it to 0. 
+
+## Complaints about hypothesis testing
+
+- implausible null hypotheses
+- encourages researchers to engage in dichotomous thinking
+- misinterpretation of the p-value
+    - the probability that the null hypothesis is true **(FALSE)**
+    - the probability that the alternative hypothesis is NOT true **(FALSE)** 
+    - smaller means a bigger effect **(FALSE)**
+
+
+## Confidence intervals
+
+A statistic calculated from a sample is just an estimate. Another sample will almost certainly yield a different estimate. A confidence interval gives us some understanding of how uncertain we are about the estimate.
+
+Confidence intervals are not probability intervals. 
+
+The "confidence" is in the process:
+
+1. sample data
+2. calculate a 95% confidence interval
+3. repeat steps 1 and 2 many times.
+4. about 95% of the confidence intervals will contain the "true" value
+
+Quick demo
+
+```{r}
+# sample 30 obs from a Normal distribution with mean 25 and SD 3
+x <- rnorm(n = 30, mean = 25, sd = 3)
+# use t.test function to get 95% CI and save
+t.out <- t.test(x)
+# extract CI and see if it contains the true mean of 25
+t.out$conf.int[1] < 25 & t.out$conf.int[2] > 25
+```
+
+We can turn this into a function and run many times.
+
+```{r}
+f <- function(n, mean, sd, cl){
+  x <- rnorm(n = n, mean = mean, sd = sd)
+  t.out <- t.test(x, conf.level = cl)
+  t.out$conf.int[1] < mean & t.out$conf.int[2] > mean
+}
+
+f(n = 30, mean = 25, sd = 3, cl = 0.95)
+
+results <- replicate(1000, expr = f(n = 30, mean = 25, sd = 3, cl = 0.95))
+sum(results)
+mean(results)
+```
+
+The point is that 95% confidence intervals either do or do not contain the "true" value. The process results in CIs capturing the value about 95% of the time.
+
+BTW, there's nothing special about "95%". That's just tradition. 
+
+Confidence intervals quantify uncertainty and tell us about the magnitude and direction of an effect in the context of a hypothesis test.
+
+## CI Example
+
+Is there a difference in mean Serum Creatinine between subjects with and without chronic kidney disease? It seems that way.
+
+```{r}
+aggregate(sc ~ class, data = kd, mean)
+```
+
+Let's use the `t-test` function to get a 95% CI on the difference in means.
+
+```{r}
+t.test(sc ~ class, data = kd)
+```
+
+The p-value is tiny, but doesn't really tell us much about how different the means are. That information is in the 95% confidence interval of the difference in means. It appears the "ckd" group has a mean that's at least 2.7 higher.
+
+
+## Odds and Odds Ratios
+
+Odds ratios are frequently used in medical research. They often arise in the context of logistic regression, which is used to model the probability of an event given one or more predictors.
+
+Odds are a function of probability.
+
+$$O = \frac{p}{(1 - p)} $$
+If p = 0.75, then the odds are 3 to 1.
+
+```{r}
+0.75/(1 - 0.75)
+```
+
+That's 3 successes for every failure.
+
+If p = 0.25, then the odds are 3 to 1 against, or 1/3.
+
+```{r}
+0.25/(1 - 0.25)
+```
+
+That's 1 success for every 3 failures.
+
+Notice odds are positive and can range from [0, infinity) unlike probability which ranges [0,1].
+
+**Odds ratios** are simply the ratio of two odds.
+
+Back to our flossing example.
+
+```{r}
+f_odds <- 0.34 / (1 - 0.34)
+m_odds <- 0.28 / (1 - 0.28)
+c(f_odds, m_odds)
+```
+
+The odds ratio:
+
+```{r}
+f_odds/m_odds
+```
+
+The odds that a female flosses is about 32% higher than the odds that a male flosses.
+
+Going the other way:
+
+```{r}
+m_odds/f_odds
+```
+
+The odds that a male flosses is about 25% lower than the odds that a female flosses.
+
+An odds ratio of 1 is equivalent to no difference in odds.
+
+## Odds ratio example
+
+The paper entitled "Race Is a Major Determinant of Secondary Hyperparathyroidism in Uremic Patients" (in J Am Soc Nephrol 11: 330–334, 2000) calculates the risk of severe secondary hyperparathyroidism between black and white subjects using odds ratios (Table 5). "Severe" is determined to be mean parathyroid hormone (PTH) > 500 pg/ml.  (Picograms per milliliter; A picogram is one-trillionth of a gram)
+
+Here's the data:
+
+```{r}
+tab5 <- matrix(c(193, 219, 9, 45), 
+             ncol = 2, 
+             dimnames = list(c("white", "black"),
+                             c("mean PTH <500", "mean PTH >500")))
+tab5
+```
+
+Let's get estimated probabilities. About 0.17 versus 0.04.
+
+```{r}
+t5 <- proportions(tab5, margin = 1)
+t5
+```
+
+Let's get the odds. About 0.05 versus 0.21.
+
+```{r}
+w_odds <- t5[1,2]/(1 - t5[1,2])
+b_odds <- t5[2,2]/(1 - t5[2,2])
+round(c(w_odds, b_odds), 2)
+```
+
+The odds ratio:
+
+```{r}
+b_odds/w_odds
+```
+
+It appears the odds (or risk) of severe secondary hyperparathyroidism in a black subject is about 4.4 times higher than the odds of a white subject.
+
+This odds ratio is just an estimate. Let's calculate a 95% CI for the odds ratio. For this we can use the `oddsratio` function in the epitools package.
+
+```{r}
+library(epitools)
+oddsratio(tab5, method = "wald") # reproduces result in paper
+```
+
+It appears the odds are at least 2 times higher for black than white, perhaps as much as 9 times higher. 
+
+## Pro and con of odds ratios
+
+A pro of odds ratios is that they're constant over the range of probability [0,1]. 
+
+Consider the following probabilities and their difference:
+
+```{r}
+p1 <- c(0.2, 0.5, 0.8, 0.9, 0.98)
+p2 <- c(0.33, 0.67, 0.89, 0.95, 0.99)
+cbind(p1, p2, riskdiff = p2 - p1)
+```
+
+But notice the odds ratios are virtually constant.
+
+```{r}
+cbind(p1, p2, riskdiff = p2 - p1, 
+      oddsratio = (p2/(1-p2))/(p1/(1-p1)))
+
+```
+
+This is useful for understanding the effect of some risk factor in a model.
+
+On the other hand, a con of odds ratios is that they obscure the difference in probabilities!
+
+Here's an odds ratio of about 9 that reflects an increase from 0.001 to 0.009. 
+
+```{r}
+(0.009/(1 - 0.009)) /
+  (0.001/(1 - 0.001))
+```
+
+Here's another odds ratio of about 9 that reflects an increase from 0.07 to 0.40.
+
+```{r}
+(0.4/(1 - 0.4)) /
+  (0.07/(1 - 0.07))
+
+```
+
+An odds ratio of 9 by itself doesn't tell us about absolute risk. Increasing the risk of illness from 0.001 to 0.009 is probably not as concerning as increasing the risk of illness from 0.07 to 0.40.
+
+Carefully consider all statistics. 
+
+
+## Statistical models
+
+Why do some people have chronic kidney disease and others do not? 
+Why do uremic patients have different parathyroid hormone (PTH) levels?
+
+That's much of statistics in nutshell: understanding variability.
+
+**Statistical models** attempt to understand variability in some outcome by modeling it as a function of other variables. That's a fancy way of saying they allows us to calculate _conditional means_.
+
+Let's say we model PTH levels as a function of race, age, gender, calcium level, and interdialytic weight gain. That would allow us to do things like...
+
+1. calculate the expected mean PTH level for, say, a white 40-year old female with 9 mg/dl calcium and 2 lbs of interdialytic weight gain 
+2. quantify how race affects expected mean PTH level
+3. determine whether age and gender both affect expected mean PTH level
+
+Statistical modeling is a massive subject! We will briefly discuss two types of models: linear modeling and logistic regression
+
+
+## Linear models
+
+Linear models, or multiple regression, seek to explain the variability of a _numeric_ outcome as a weighted sum of predictors. For this reason we call them additive models. 
+
+T-tests, ANOVAs, and ANCOVAs are all special cases of linear modeling.
+
+Let's use some simulated data to work with linear models. First we simulate data for a straight line. Notice y is completed determined by x
+
+```{r}
+x <- 1:25
+y <- 2 + 0.5*x
+plot(x, y)
+```
+
+Now let's some generate some "noise" and add that to the data. We'll draw 25 values from a Normal distribution with mean 0 and standard deviation 3.
+
+```{r}
+set.seed(1)
+e <- rnorm(25, mean = 0, sd = 1.5)
+y <- y + e
+plot(x, y)
+```
+
+Now let's fit a model to this data. Since we generated the data, we know the "correct" model. We use the `lm` function. "y ~ x" means "model y as a function of x plus an intercept". We save the result to `m` and use the `summary` function to look at the results. 
+
+```{r}
+m <- lm(y ~ x)
+summary(m)
+```
+
+Recall the "true" values we used to generate this data were
+
+- Intercept: 2
+- Slope: 0.5
+- SD of Normal dist'n: 1.5
+
+The `lm` function essentially tries to recover these values. It estimates...
+
+- Intercept: 2.170
+- Slope: 0.506
+- SD of Normal dist'n: 1.455
+
+`lm` took the straight line model we gave it (y = a + bx), looked at the data, and estimated it came from a line with formula y = 2.17 + 0.50*x and noise/error drawn from a Normal distribution with mean 0 and standard deviation 1.45.
+
+_That's basically statistical modeling: propose a model that you think captures the data generating mechanism and fit it to the data._
+
+Notice `lm` assumes the noise comes from a Normal distribution with a fixed standard deviation. Those are known as the _normality_ and _constant variance_ assumptions. It also assumes data are _independent_ of one another and the dependent variable (y) is _numeric_.
+
+More advanced models allow for non-numeric dependent variables, non-constant variance, non-normal error distributions, non-linear effects, interactions, repeated measures, etc.
+
+## Logistic regression
+
+
+
+## References
+
+-  Blakeley B. McShane, David Gal, Andrew Gelman, Christian Robert & Jennifer L. Tackett (2019) Abandon Statistical Significance, The American Statistician, 73:sup1, 235-245, DOI: 10.1080/00031305.2018.1527253 
