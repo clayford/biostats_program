@@ -347,7 +347,7 @@ Linear models, or multiple regression, seek to explain the variability of a _num
 
 T-tests, ANOVAs, and ANCOVAs are all special cases of linear modeling.
 
-Let's use some simulated data to work with linear models. First we simulate data for a straight line. Notice y is completed determined by x
+Let's use some simulated data to work with linear models. First we simulate data for a straight line. Notice y is completed determined by x. For every one unit increase in x, y increases by 0.5.
 
 ```{r}
 x <- 1:25
@@ -381,17 +381,214 @@ The `lm` function essentially tries to recover these values. It estimates...
 
 - Intercept: 2.170
 - Slope: 0.506
-- SD of Normal dist'n: 1.455
+- SD of Normal dist'n: 1.455 (Residual standard error)
 
 `lm` took the straight line model we gave it (y = a + bx), looked at the data, and estimated it came from a line with formula y = 2.17 + 0.50*x and noise/error drawn from a Normal distribution with mean 0 and standard deviation 1.45.
 
 _That's basically statistical modeling: propose a model that you think captures the data generating mechanism and fit it to the data._
 
-Notice `lm` assumes the noise comes from a Normal distribution with a fixed standard deviation. Those are known as the _normality_ and _constant variance_ assumptions. It also assumes data are _independent_ of one another and the dependent variable (y) is _numeric_.
+Notice `lm` assumes the noise comes from a Normal distribution with mean 0 and a fixed standard deviation. Those are known as the _normality_ and _constant variance_ assumptions. It also assumes data are _independent_ of one another and the dependent variable (y) is _continuous_. (ie, numbers with decimals)
 
-More advanced models allow for non-numeric dependent variables, non-constant variance, non-normal error distributions, non-linear effects, interactions, repeated measures, etc.
+More advanced models allow for non-continuous dependent variables, non-constant variance, non-normal error distributions, non-linear effects, interactions, non-independent observation, etc.
+
+Let's look at the summary again:
+
+```{r}
+summary(m)
+```
+
+The _Residuals_ section is a way to assess the constant variance assumption. Hopefully median is close to 0 and the Min/1Q and 3Q/Max values are similar in absolute value
+
+The _Coefficients_ section contains the estimated weights in our weighted sum. The standard errors quantify the uncertainty in our estimated. The t value and associated p-values are null hypothesis tests that the coefficients are 0.
+
+The _R-squared_ values quantify how much variability in our dependent variable is explained by the predictors. Ranges from 0 to 1.
+
+The _F-statistic_ is a null hypothesis test that all predictors (except intercept) are 0.
+
+Let's do a realistic example. The vitcap2 data frame has 84 rows and 3 columns and contains information on workers in the cadmium industry. Of interest is understanding lung volume as a function of age and length of exposure to cadmium. The internet tells me that "Cadmium is a naturally occurring toxic metal."
+
+```{r}
+library(ISwR)
+data("vitcap2")
+summary(vitcap2)
+```
+
+The group variable is not really numeric but rather codes: 
+
+- 1: exposed > 10 years 
+- 2: exposed < 10 years
+- 3: not exposed
+
+Let's make that a factor.
+
+```{r}
+vitcap2$group <- factor(vitcap2$group, 
+                        labels = c("exposed > 10 years", 
+                                   "exposed < 10 years",
+                                   "not exposed"))
+summary(vitcap2)
+```
+
+Quick plot
+
+```{r}
+library(ggplot2)
+ggplot(vitcap2) +
+  aes(x = age, y = vital.capacity) +
+  geom_point() +
+  facet_wrap(~group)
+```
+
+
+Model vital.capacity as a function of group and age. We are assuming that vital.capacity can be modeled as a weighted sum of age and exposure group.
+
+```{r}
+mod1 <- lm(vital.capacity ~ group + age, data = vitcap2)
+summary(mod1)
+```
+
+_If you believe this model_, it appears that as you age, your lung volume decreases; about 0.03 every year you get older. This model assumes the effect of age is the same, no matter the length of exposure.
+
+What if we thought the effect of age _depended_ on exposure? To model this we need to include an interaction.
+
+```{r}
+mod2 <- lm(vital.capacity ~ group + age + group:age, data = vitcap2)
+summary(mod2)
+
+```
+
+Our model is now getting difficult to interpret. The age coefficient of -0.08 now applies to the group exposed more than 10 years. The last two rows reflect the _change in the age coefficient_ for the other two groups. It appears the "not exposed" group has an age effect of about -0.08 + 0.05 = -0.03.
+
+This model is sometimes referred to as an ANCOVA model, or analysis of covariance. 
+
+Which model is better? Or in other words, do we need the interaction? We can evaluate this with a hypothesis test called the "partial F test". The null hypothesis is that there is no difference in the models in explaining the variability in vital.capacity. 
+
+```{r}
+anova(mod1, mod2)
+```
+
+It appears we have some evidence against the null and that the more complicated model may be justified.
+
+Effect plots can be helpful for visualizing these models. The ggeffects package is one package that makes these plots relatively easy to create.
+
+```{r}
+library(ggeffects)
+plot(ggeffect(mod2, terms = c("age", "group")))
+```
+
+It looks the effect of age is more pronounced for those exposed to cadmium over 10 years. But notice the large confidence ribbon around age 20. Is it possible to have someone age 20 that has been exposed to cadmium over 10 years?
+
+What if we want to use our model to make a prediction? We can use the `predict` function for this. Expected mean vital capacity for someone age 40 and exposed over 10 years? 
+
+```{r}
+predict(mod2, newdata = data.frame(age = 40, group = "exposed > 10 years"))
+```
+
+This is just an estimate. Let's get a 95% confidence interval on the _expected mean_:
+
+```{r}
+predict(mod2, newdata = data.frame(age = 40, group = "exposed > 10 years"),
+        interval = "confidence")
+```
+
+If we wanted a confidence interval for a predicted value for a specific person age 40 and exposed over 10 years we use a "prediction" interval.
+
+```{r}
+predict(mod2, newdata = data.frame(age = 40, group = "exposed > 10 years"),
+        interval = "prediction")
+
+```
+
+Notice it's much wider. Much less certain about expected values for a _person_ versus an expected _mean_ value.
+
+Advice: go slow, be cautious, and be modest when doing statistical modeling.
 
 ## Logistic regression
+
+We often want insight into why a certain event happens or does not happen. Chronic kidney disease is one such event. Are there certain predictors that might help us assess the probability of having or developing chronic kidney disease?
+
+Logistic regression is a valuable method for _modeling the probability_ of binary events. Given various predictor inputs it returns a predicted probability that ranges from 0 to 1. 
+
+Whole books are devoted to logistic regression. This is a very brief intro!
+
+Let's dive into an example. Model the probability of chronic kidney disease as a function of blood glucose and blood urea.
+
+Let's first examine the variables we'll use:
+
+```{r}
+by(kd[,c("bu", "bgr")], kd$class, summary)
+```
+
+We have some missing data. A modern statistical approach is to _impute_ the missing data using sophisticated methods. In the interest of time we'll simply use what data we have.
+
+```{r}
+kd2 <- na.omit(kd[,c("bu", "bgr","class")])
+```
+
+
+Notice we use `glm` instead of `lm`. Logistic regression belongs to a class of models known as Generalized Linear Models. Notice we also specify the error distribution as "binomial", to indicate our response is binary in nature. Finally, before we start we relevel the class variable to have "notckd" as the reference level. That means we'll model the probability of having kidney disease.
+
+```{r}
+kd2$class <- relevel(kd2$class, ref = "notckd")
+lr1 <- glm(class ~ bgr + bu, data = kd2, family = "binomial")
+summary(lr1)
+```
+
+
+The coefficients are on the _log_odds_ scale. They are difficult to interpret, though positive coefficients mean the increase the probability of the event as they get higher. If we exponentiate the coefficients we get an _odds ratio_. Those are a little easier to interpret and are usually reported in articles.
+
+```{r}
+exp(coef(lr1))
+```
+
+It appears that every one unit increase in these predictors increases the odds of kidney disease diagnosis by about 3 and 5 percent, respectively. 
+
+To get confidence intervals we can use the `confint` funtion and then exponentiate.
+
+```{r}
+exp(confint(lr1))
+```
+
+The odds ratio (OR) for blood urea might be report as 1.05 (1.04, 1.07).
+
+The `predict` function allows us to get predicted probabilities.
+
+```{r}
+predict(lr1, newdata = data.frame(bgr = 120, bu = 40), type = "response")
+```
+
+Effect plots are useful for understanding logistic regression models.
+
+```{r}
+plot(ggeffect(lr1))
+```
+
+
+How good is this model? _Deviance_ helps answer this. Deviance summarizes the difference between observed and fitted values. The deviance by itself means little.
+
+```{r}
+deviance(lr1)
+```
+
+However if the model is "good" the deviance should be distributed as a chi-square with n - p degrees of freedom. Our model `lr1` has 348 degrees of freedom. What does that mean? Here's what a chi-square distribution with 348 DF looks like.
+
+```{r}
+curve(dchisq(x, df = 348), from = 250, to = 450)
+```
+
+Our residual deviance should like it could have plausibly been drawn from this distribution. What's the probability of getting 291.72 or higher from this distribution?
+
+```{r}
+pchisq(deviance(lr1), df = df.residual(lr1), lower.tail = FALSE)
+```
+
+Since this p-value is large, we may conclude this model fits good enough (though not necessarily "correct"). You don't always need a p-value. If deviance is way bigger than the degrees of freedom, you can safely conclude the model isn't "good".
+
+A pseudo R-squared can be calculated using the `nagelkerke` function in the rcompanion package.
+
+```{r}
+rcompanion::nagelkerke(lr1)
+```
 
 
 
