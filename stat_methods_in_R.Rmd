@@ -483,26 +483,52 @@ Two things usually done with survival analysis:
 - Estimated survival curves using the _Kaplan-Meier method_
 - Model survival time using _Cox proportional hazards model_
 
+A survival curve plots probability of surviving over time. The Cox proportional hazards model is like linear regression for survival time.
 
-## Survival analysis example
+## Survival analysis example: Kaplan-Meier
 
-Table 4, 90-day mortality section.
+From the article: "A Kaplan-Meier curve also confirmed that time to death was significantly shorter in patients with increased phosphate levels (Fig 3)."
 
+Figure 3 shows survival curves for 3 groups:
+
+- Group 1 (phosphate decrease group), less than -1.3 mg/dL
+- Group 2 (stable group), -1.3 to 0 mg/dL
+- Group 3 (phosphate increase group), greater than 0 mg/dL
+
+These groups are not in the data as a variable and must be _derived_ using the Delta_P variable (phosphate change). We can do that using the base R `cut` function. Below we create a new categorical variable called `p_change` that has three groups according to the definition above. 
+ 
+The `breaks = c(-Inf, -1.3, 0, Inf)` argument specifies the boundaries of our groups. `-Inf` and `Inf` are R keywords that mean negative infinity and positive infinity, respectively. Four boundaries implies three groups (right inclusive):
+
+- (-Inf, -1.3]
+- (-1.3, 0]
+- (0, Inf)
+ 
 ```{r}
-d$p_change <- cut(d$Delta_P, breaks = c(-Inf, -1.3, 0, Inf), 
-                  labels = c("Group 1", "Group 2", "Group 3"),
-                  include.lowest = TRUE)
-xtabs(~ P0h_3groups + p_change, data = d, subset = survivor == "Non-Survivor")
+d <- mutate(d, p_change = cut(Delta_P, 
+                              breaks = c(-Inf, -1.3, 0, Inf), 
+                              labels = c("Group 1", "Group 2", "Group 3")))
+xtabs(~ p_change, data = d, subset = Death_90D == "Yes")
 ```
+
+Now we can create the Kaplan-Meier survivor curves for the three groups. This plots the estimated probability of surviving over time. To do this we'll use the survival package that comes with R.
+
+The `survfit` function creates survival curves using model notation similar to `lm` and `glm`. In this case we want to model time_to_death_90D as a function of p-change, the grouping variable we just created. The only difference is we need to create a _survival object_ for our response variable using the `Surv` function. It takes two arguments: the variable we're modeling (time_to_death_90D) and the condition that defines the event of interest (Death_90D=="Yes").
 
 ```{r}
 library(survival)
-Surv(d$time_to_death_90D, d$Death_90D=="Yes")
 surv.group <- survfit(Surv(time_to_death_90D, Death_90D=="Yes") ~ p_change,
                       data = d)
-plot(surv.group, lty = 1:3, xlab = "Days")
-legend("topright",c("Group 1", "Group 2", "Group 3"), lty = 1:3) 
+surv.group
 ```
+
+Now we can create the plot by calling `plot` on the surv.group object we created. Note: we need to run the entire chunk of code.
+
+```{r}
+plot(surv.group, lty = 1:3, xlab = "Days", ylab = "Proportion survival")
+legend("topright",c("Group 1", "Group 2", "Group 3"), lty = 1:3) 
+
+```
+
 
 The Phosphate increase group (Group 3) has about a 30% chance of survival to 20 days.
 
@@ -520,9 +546,16 @@ survdiff(Surv(time_to_death_90D, Death_90D=="Yes") ~ p_change,
                       data = d, subset = p_change != "Group 3")
 ```
 
-The paper states "a multivariable Cox model showed that hyperphosphatemia was significantly associated with increased 90-day (HR 1.05, 95% CI 1.02–1.08, P = 0.001) mortality."
 
-HR means _hazard ratio_. 
+## Survival analysis example: Cox proportional hazards model
+
+The paper states "To delineate the association between phosphate and mortality, we constructed stepwise multivariable Cox models. In all three models, phosphate levels were significantly associated with an increased risk of death. The fully adjusted model (model 3) revealed that the HRs for 90-day mortality was (per 1 mg/dL increase, 95% CI, 1.02–1.08; P = 0.001) (Table 3)."
+
+_Stepwise_ is a form of variable selection that automatically finds the "best" model given lots of candidate predictors. It is frowned upon by many statisticians for many reasons.
+
+HR means _hazard ratio_. A hazard ratio measures how often an event happens in one group compared to how often it happens in another group, over time. A hazard ratio of 1.05 suggests that every one unit increase in phosphate level is associated with 5% increase in the risk of death.
+
+_The fully adjusted model_ in this case is the 
 
 
 ```{r}

@@ -1,0 +1,51 @@
+Hello Summer Researchers!
+
+We're looking forward to getting you up and running with R, data visualization and statistical methods June 22 - 24. Please read this email carefully as it contains instructions for getting you ready for your three R classes.
+
+First off, some introductions. We are Jenn Huck, Marieke Jones, and Clay Ford. Jenn is a Data Librarian with the UVA Library, Marieke is a Research Data Specialist with the UVA Health Sciences Library, and Clay is a Statistical Research Consultant with the UVA Library. Jenn is teaching the Intro to R session, Marieke the Data Visualization session, and Clay the statistical methods session. We're excited to meet you! Now the technical details.
+
+The sessions will be held virtually using Zoom from 9:00 - 11:00 AM EST, June 22 - 24. Please use the following link to attend ALL sessions:
+
+https://virginia.zoom.us/j/96057008272?pwd=S2txQ0dqOVVFTmR4OVQwUVk2WHEvdz09&from=addon
+
+Prior to each class your instructor will email you additional information about accessing class materials.
+
+To follow along and participate, you will need to use a computer that has both R and RStudio installed. Both are free to download and install. Please visit the following page for instructions: https://clayford.github.io/r_install/ 
+
+The R sessions will make use of several packages and R Markdown. It's OK if you don't understand what that means. We'll explain it in class. However we would like you to go ahead and install the packages before we meet and get set up to use R Markdown. It should be easy to do.
+
+    If you haven't already, install R and RStudio
+    Open RStudio (Just RStudio, not R)
+    go to File...New File...R Markdown...
+    If a "New R Markdown" dialog appears, you're good to go and can skip to step 7!
+    If you have never worked with R Markdown before, a dialog will pop up titled "Install Required Packages" that will ask if you want to install the required packages, which includes rmarkdown and knitr. Click Yes.
+    If the packages install successfully, a "New R Markdown" dialog will appear, which you can Cancel.
+    Next go to Tools...Install Packages...
+    Enter "tidyverse labelled" in the dialog box (just like that but without quotes; those are the names of two R packages)
+    Click Install. Several packages should begin to download and install. It may take a few minutes. When finished, you should see a message that says in part "The downloaded binary packages are in..." 
+    
+Finally test the tidyverse package installation by typing the following command into the Console at the command prompt and hitting Enter:  > library(tidyverse)
+
+If the packages installed correctly, you should see something like the following:
+
+-- Attaching packages ------------------------------------------ tidyverse 1.3.1 --
+v ggplot2 3.3.3     v purrr   0.3.4
+v tibble  3.1.2     v dplyr   1.0.6
+v tidyr   1.1.3     v stringr 1.4.0
+v readr   1.4.0     v forcats 0.5.1
+
+-- Conflicts --------------------------------------------- tidyverse_conflicts() --
+x dplyr::filter() masks stats::filter()
+x dplyr::lag()    masks stats::lag()
+
+If you do not see something like that, or run into any other issues, please contact us for help or come to the open office hour Zoom session on Monday, June 21 from 11:15 - noon:
+
+https://virginia.zoom.us/j/98410744119?pwd=SnN2SXV0WURlM3ptaWRUZFAza0NrUT09&from=addon
+
+(Note: this Zoom link is different from the class Zoom link!)
+
+If you already have R and RStudio installed, and it's been over a year since you installed them, we recommend updating both which can be done by simply installing the latest versions. We recommend doing the same with R packages. In RStudio go to Tools...Check for Package Updates.... If any updates are available, click Select All and click Install Updates. If you are asked "Do you want to install from sources the packages which need compilation" just click No. If this is your first time installing R and RStudio then this does not apply to you.
+
+Please let us know if you have any questions. See you soon!
+
+Jenn, Marieke, and Clay

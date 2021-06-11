@@ -1,0 +1,42 @@
+age
+sex
+myocardial infarction
+congestive heart failure
+cerebrovascular disease
+peripheral vascular disease
+dimentia
+diabetes mellitus
+hypertension
+chronic obstructive pulmonary disease
+potassium at CRRT initiation (0 h).
+bicarbonate at CRRT initiation (0 h).
+phosphate at CRRT initiation (0 h).
+phosphate at 24 h after CRRT initiation (24 h).
+phosphate change(P_24h - P_0h).
+creatinine level before CRRT initiation.
+charlson comorbidity index at CRRT initiation
+body mass index at ICU admission
+systolic blood pressure at CRRT initiation (0 h)
+diastolic blood pressure at CRRT initiation (0 h)
+mean arterial pressure at CRRT initiation (0 h)
+mechanical ventilation at CRRT initiation ('1'= Yes, '0'=No)
+white blood cell (microL) at CRRT initiation  (0 h)
+hemoglobin (g/dL) at CRRT initiation  (0 h)
+blood urea nitrogen (mg/dL) at CRRT initiation  (0 h)
+Creatinine (mg/dL) at CRRT initiation  (0 h)
+Albumin (g/dL) at CRRT initiation  (0 h)
+C-reactive protein (mg/L) at CRRT initiation  (0 h)
+glomerular filtration rate at CRRT initiation  (0 h)
+2 h urine output at CRRT initiation (0 h)
+APACHE II score at CRRT initiation (0 h)
+SOFA score at CRRT initiation (0 h)
+cause of CRRT initiation (1=Volume overload, 2=metablic acidosis, 3=hyperkalemia, 3=uremia, 4=oliguria, 5=others)
+total effluent volume/kg.
+acute kidney injury network stages
+cause of acute kidney injury (1=Sepsis, 2=Nephrotoxic, 3=Ischemia, 4=Surgery, 5=Others)
+3 groups by 0h phosphate levels (1=hypophosphatemic group, 2=normophosphatemic group, 3=hyperphosphatemic group)
+3 groups by 24h phosphate levels (1=hypophosphatemic group, 2=normophosphatemic group, 3=hyperphosphatemic group)
+death at 90 day after CRRT initiation ('1'=Yes, '0'=No)
+duration to 90-day mortaltiy after CRRT initiation
+death at 28 day after CRRT initiation ('1'=Yes, '0'=No)
+duration to 28-day mortaltiy after CRRT initiation.
