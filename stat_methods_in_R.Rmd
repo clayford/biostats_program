@@ -31,10 +31,15 @@ Jung, Su-Young J et al. (2019), Data from: Phosphate is a potential biomarker of
 d <- readRDS('crrt.rds')
 ```
 
-The study endpoint was _death that occurred within 28 and 90 days of continuous renal replacement therapy (CRRT) initiation_. CRRT is used to provide renal support for critically ill patients with acute kidney injury (AKI). We are interested in patients that died within, or lived beyond, 90 days. This is contained in the `Death_90D` variable.
+The study endpoint was _death that occurred within 28 and 90 days of continuous renal replacement therapy (CRRT) initiation_. CRRT is used to provide renal support for critically ill patients with acute kidney injury (AKI). We are interested in whether or not patients died within 28 or 90 days, and if so, how long did they survive with CRRT. This is contained in the `Death_*D` and `time_to_death_*D` variables.
 
 ```{r}
 summary(d$Death_90D)
+```
+
+```{r}
+summary(d$time_to_death_90D)
+hist(d$time_to_death_90D)
 ```
 
 
@@ -55,7 +60,7 @@ xtabs(~ Death_90D + MI, data = d) %>%
   round(2) 
 ```
 
-About 11% of survivors experienced MI versus 9% of non-survivors. How likely are we to observe a difference as big or bigger than 0.02 if there really is no difference in the entire population?
+About 11% of survivors experienced MI versus 9% of non-survivors. What is the probability we observe a difference as big or bigger than 0.02 if there really is no difference in the entire population?
 
 The answer is a _p-value_. We get the p-value using a hypothesis test. In this case we want to use a 2-sample proportion test with a two-sided alternative.
 
@@ -82,13 +87,13 @@ The p-value is about 0.39. If the proportion of survivors and non-survivors with
 
 We could say, "with the current sample size the data were unable to overcome the supposition of no difference in the proportions." 
 
-The 95% confidence interval is [-.06, 0.02]. We're not sure of the magnitude or direction of the difference.
+The 95% confidence interval is (-.06, 0.02). We're not sure of the magnitude or direction of the difference.
 
 More about confidence intervals shortly.
 
 ## Chi-square test
 
-Another way to compare two proportions is with a chi-square test of association. The null hypothesis is no association between survivor status and MI. Notice the p-value is identical to what we got with `prop.test`. In fact the math is exactly the same. 
+Another way to compare two proportions is with a chi-square test of association. From the previous example, the null hypothesis is no association between survivor status and MI. Notice the p-value is identical to what we got with `prop.test`. In fact the math is exactly the same. 
 
 ```{r}
 xtabs(~ Death_90D + MI, data = d) %>% 
@@ -119,52 +124,24 @@ Editorial: The article does not explain why they used this alternative. I'm surp
 Base R has a number of hypothesis test functions. Here are a few:
 
 - `prop.test`: compare two proportions
-- `t.test`: compare two means
 - `chisq.test`: association between categorical variables
+- `t.test`: compare two means
+- `aov`: compare more than two means
 - `cor.test`: linear association between numeric variables
 - `wilcox.test`: compare ranks between two groups
 - `kruskal.test`: compare ranks between more than two groups
 
 Much could be said about the theory and assumptions of these tests. We don't have time to do that. Besides most research questions require more sophisticated statistical approaches that allow us to incorporate multiple variables or predictors. 
 
-However here are two quick examples.
-
-## Mann-Whitney test (aka Wilcoxon test)
-
-From the article: "Variables that did not show normal distribution were compared using Mann-Whitney test or Kruskal-Wallis test. The Kolmogorov-Smirnov test was used to examine the normality of the distribution of parameters."
-
-Let's look at White Blood Cell count by `Death_90D`. These values are reported in Table 1.
-
-```{r}
-tapply(d$WBC_0h, d$Death_90D, summary)
-```
-
-They decided to report medians instead of means, so presumably WBC is not normally distributed. The authors said they used the Kolmogorov-Smirnov test for normality. The null is the data are normal. A small p-value provides evidence against the null. Below we use `tapply` to apply the `ks.test` function to WBC_0h by survivor group. We specify "dnorm" because we want to compare the distribution of WBC to a normal distribution. 
-
-```{r}
-tapply(d$WBC_0h, d$Death_90D, ks.test, "dnorm")
-```
-
-It's probably more instructive to simply look at histograms. We don't really need a hypothesis test to sanctify the fact the distributions are not normal.
-
-```{r}
-ggplot(d) +
-  aes(x = WBC_0h) +
-  geom_histogram(bins = 20) +
-  facet_wrap(~Death_90D)
-```
-
-Since these distributions are not normal looking, the authors elected to compare the medians instead of the means using the Mann-Whitney test, aka Wilcoxon test.
-
-```{r}
-wilcox.test(WBC_0h ~ Death_90D, data = d)
-```
+However here's one more example.
 
 ## Correlation test
 
 From the article: "Phosphate level significantly correlated with the APACHE II (P < 0.001) and SOFA (P < 0.001) scores."
 
-Correlation summarizes the strength and direction of a linear relationship. A correlation test tests the null hypothesis that the correlation is different from 0.
+APACHE II and SOFA scores are measures of disease severity.
+
+Correlation summarizes the strength and direction of a linear relationship and ranges from -1 to 1. A correlation test tests the null hypothesis that the correlation is different from 0.
 
 ```{r}
 cor.test(d$P_0h, d$APA_II_CRRT_0h)
@@ -178,7 +155,7 @@ Editorial: I think it would have been more instructive to report the estimated c
 ggplot(d) +
   aes(x = P_0h, y = APA_II_CRRT_0h) +
   geom_point() +
-  geom_smooth(method = "lm")
+  geom_smooth()
 ```
 
 
@@ -198,14 +175,14 @@ A statistic calculated from a sample is just an estimate. Another sample will al
 
 Confidence intervals are _not probability intervals_. 
 
-The "confidence" is in the process:
+The "confidence" is in the theoretical process:
 
 1. sample data
 2. calculate a 95% confidence interval
 3. repeat steps 1 and 2 many times.
 4. about 95% of the confidence intervals will contain the "true" value
 
-Quick demo
+Quick demo: sample 30 obs from a Normal distribution with mean 25 and SD 3, calculate the 95% confidence interval, repeat 1000 times, and determine proportion of times the CI captures the true value.
 
 ```{r}
 # sample 30 obs from a Normal distribution with mean 25 and SD 3
@@ -236,7 +213,7 @@ Confidence intervals quantify uncertainty and tell us about _the magnitude and d
 
 ## CI Example
 
-The article reports a significant difference in mean APACHE II scores between survivors and non-survivors (Table 1). We can replicate this using the `t.test` function. However it does not report a confidence interval on the difference in means.
+The article reports a significant difference in mean APACHE II scores between survivors and non-survivors (Table 1). However it does not report a confidence interval on the difference in means. We can replicate this using the `t.test` function. 
 
 ```{r}
 t.test(APA_II_CRRT_0h ~ Death_90D, data = d)
@@ -248,12 +225,14 @@ Note: The internet tells us that "The APACHE II score ranges from 0 to 71 points
 
 ## Linear Model basics
 
-Linear models, or multiple regression, allow us to estimate means conditional on several predictors. For example, Table 1 tells us the overall mean APACHE II score is 27.2
+Linear models, or multiple regression, allow us to estimate means _conditional on one or more predictors_. For example, Table 1 tells us the overall mean APACHE II score is 27.2
 
 _Conditional mean_ APACHE II scores given survivor status:
 
 survivors: 25.0
 non-survivors: 28.2
+
+We can keep adding conditions.
 
 _Conditional mean_ APACHE II score given survivor status is Non-survivor and age is 50: 27.3
 
@@ -269,16 +248,16 @@ Whole books are devoted to linear regression. This is a very brief intro!
 
 From the article: "In a multivariable linear regression analysis after adjustment for age, sex, CCI, MAP, and urine volume, phosphate levels were significantly associated with the SOFA (beta = 0.10, P = 0.02) and APACHE II (beta = 0.58, P < 0.001) scores (Table 2)"
 
-Let's replicate the SOFA analysis using the `lm` function.
+Let's replicate the SOFA analysis using the `lm` function. The formula for this model is `SOFA_CRRT_0h ~ Age + Sex + CCI + MAP_0h + UO_2hrs + P_0h`. This basically says "we (the authors) think the SOFA score is a weighted sum of age, sex, CCI, MAP, urine volume, and phosphate levels."
 
 ```{r}
 m1 <- lm(SOFA_CRRT_0h ~ Age + Sex + CCI + MAP_0h + UO_2hrs + P_0h, data = d)
 summary(m1)
 ```
 
-The Estimates column in the Coefficients section are the "betas". They are basically weighted sums in an additive formula. These values match what are in Table 2 (the multivariate column for the SOFA section).
+The Estimates column in the Coefficients section are the "betas". They are the weighted sums in an additive formula. These values match what are in Table 2 (the multivariate column for the SOFA section).
 
-The P_0H coefficient (or beta) is 0.10. That says "each additional unit of Phosphate produces an increase of 0.10 in the SOFA mean score, assuming all else held constant."
+The P_0H coefficient (or beta) is 0.10. That says "each additional unit of Phosphate produces an increase of 0.10 in the SOFA mean score, assuming all else held constant." Note: The SOFA score ranges from 0 to 24.
 
 Let's say we have two subjects with following values. Notice they are identical except for Phosphate (P_0h).
 
@@ -332,7 +311,7 @@ The plot shows us...
 - points above 0 are those observations for which the model under-predicts (the SOFA values are _higher_ than the model predicts)
 - points below 0 are those observations for which the model over-predicts (the SOFA values are _lower_ than the model predicts)
 
-The SOFA scores range from 1 to 21. A model with conditional means that are systematically "off" by 5 or 10 points is perhaps not great.
+Reacll SOFA scores range from 0 to 24. A model with conditional means that are systematically "off" by 5 or 10 points is perhaps not great.
 
 
 ## Odds and Odds Ratios
@@ -389,41 +368,6 @@ death_odds/surv_odds
 
 It appears the odds of dying within 90 days after CRRT is about 19% lower for those who experienced myocardial infarction versus those who did not! But this is just a point estimate. We should calculate a confidence interval for the odds ratio. There are many ways to go about doing this. The most common way is in the context of _logistic regression_.
 
-## Pro and con of odds ratios
-
-A pro of odds ratios is that they're constant over the range of probability [0,1]. 
-
-Consider the following probabilities and their difference. The differences vary quite a bit, but the odds ratios are virtually constant.
-
-```{r}
-p1 <- c(0.2, 0.5, 0.8, 0.9, 0.98)
-p2 <- c(0.33, 0.67, 0.89, 0.95, 0.99)
-cbind(p1, p2, riskdiff = p2 - p1, 
-      oddsratio = (p2/(1-p2))/(p1/(1-p1)))
-```
-
-This is useful for understanding the effect of some risk factor in a model.
-
-On the other hand, a con of odds ratios is that they obscure the difference in probabilities.
-
-Here's an odds ratio of about 9 that reflects an increase from 0.001 to 0.009. 
-
-```{r}
-(0.009/(1 - 0.009)) /
-  (0.001/(1 - 0.001))
-```
-
-Here's another odds ratio of about 9 that reflects an increase from 0.07 to 0.40.
-
-```{r}
-(0.4/(1 - 0.4)) /
-  (0.07/(1 - 0.07))
-
-```
-
-An odds ratio of 9 by itself doesn't tell us about absolute risk. Increasing the risk of illness from 0.001 to 0.009 may not be as concerning as increasing the risk of illness from 0.07 to 0.40.
-
-Carefully consider all statistics. 
 
 ## Logistic regression
 
@@ -435,7 +379,7 @@ Whole books are devoted to logistic regression. This is a very brief intro!
 
 ## Logistic regression example
 
-Earlier we estimated the odds of surviving beyond 90 days after CRRT is about 23% higher for those who experienced myocardial infarction versus those who did not. We can get this same estimate using logistic regression.
+Earlier we estimated the odds of dying within 90 days after CRRT is about 19% lower for those who experienced myocardial infarction versus those who did not. We can get this same estimate using logistic regression.
 
 We use the `glm` function, which stands for "generalized linear model". We specify `family = binomial` since our response variable is binary. The summary output looks similar to linear regression output, but the coefficients are on the _logit_ scale, or log odds. 
 
@@ -457,7 +401,7 @@ exp(confint(m2))
 
 ```
 
-The CI is (0.54, 1.25). The CI on the MI odds ratio overlaps 1 by a wide margin in both directions. (Recall a ratio of 1 is the same as equal odds.) We're not sure what effect having a MI has on the probability of dying. 
+The CI is (0.54, 1.25). The CI on the MI odds ratio overlaps 1 by a wide margin in both directions. (Recall a ratio of 1 is the same as equal odds.) We're not sure what effect having a MI has on the probability of dying within 90 days after CRRT. 
 
 The Intercept is the log-odds of dying without MI. The MI coefficient is the change in log-odds of dying if one had a MI.
 
@@ -468,15 +412,39 @@ predict(m2, newdata = data.frame(MI = 0:1), type = "response")
 ```
 
 
+## Odds ratios obscure differences in probabilities
+
+A drawback of odds ratios is that they obscure the difference in probabilities.
+
+Here's an odds ratio of about 9 that reflects an increase from 0.001 to 0.009. 
+
+```{r}
+(0.009/(1 - 0.009)) /
+  (0.001/(1 - 0.001))
+```
+
+Here's another odds ratio of about 9 that reflects an increase from 0.07 to 0.40.
+
+```{r}
+(0.4/(1 - 0.4)) /
+  (0.07/(1 - 0.07))
+
+```
+
+_An odds ratio of 9 by itself doesn't tell us about absolute risk_. Increasing the risk of illness from 0.001 to 0.009 may not be as concerning as increasing the risk of illness from 0.07 to 0.40.
+
+Carefully consider all statistics. 
+
+
 ## Survival analysis basics
 
-Survival analysis is the analysis of data on _the time to occurrence of a specific event_. Example: time to death within 90 days of CRRT initiation. 
+Survival analysis is the analysis of data on _the time until occurrence of a specific event_. Example: time to death within 90 days of CRRT initiation. 
 
 The term "survival" is used because the event of interest is often (sadly) death. Survival analysis is a field unto itself. I can't do it justice in this little presentation!
 
 We use survival analysis to estimate _the probability that a subject does not experience the event until some time_. Example: Probability a subject survives at least 60 days after CRRT initiation.
 
-An important feature of survival analysis data is that it usually contains "incomplete" or _censored_ data. These are subjects that do not experience the event of interest. Example: some subjects (thankfully) survive beyond 90 days after CRRT. However we can make use of their data. To exclude them would _bias_ our probability estimates, which is a fancy way of saying it would make our estimates wrong. 
+An important feature of survival analysis data is that it usually contains "incomplete" or _censored_ data. These are subjects that _do not_ experience the event of interest. Example: some subjects (thankfully) survive beyond 90 days after CRRT. However we can make use of their data. To exclude them would _bias_ our probability estimates, which is a fancy way of saying it would make our estimates wrong. 
 
 Two things usually done with survival analysis:
 
@@ -495,7 +463,7 @@ Figure 3 shows survival curves for 3 groups:
 - Group 2 (stable group), -1.3 to 0 mg/dL
 - Group 3 (phosphate increase group), greater than 0 mg/dL
 
-These groups are not in the data as a variable and must be _derived_ using the Delta_P variable (phosphate change). We can do that using the base R `cut` function. Below we create a new categorical variable called `p_change` that has three groups according to the definition above. 
+These groups are not in the data as a variable and must be _derived_ using the `Delta_P` variable (phosphate change). We can do that using the base R `cut` function. Below we create a new categorical variable called `p_change` that has three groups according to the definition above. 
  
 The `breaks = c(-Inf, -1.3, 0, Inf)` argument specifies the boundaries of our groups. `-Inf` and `Inf` are R keywords that mean negative infinity and positive infinity, respectively. Four boundaries implies three groups (right inclusive):
 
@@ -510,9 +478,12 @@ d <- mutate(d, p_change = cut(Delta_P,
 xtabs(~ p_change, data = d, subset = Death_90D == "Yes")
 ```
 
-Now we can create the Kaplan-Meier survivor curves for the three groups. This plots the estimated probability of surviving over time. To do this we'll use the survival package that comes with R.
+Now we can create the Kaplan-Meier survivor curves for the three groups. This plots the _estimated probability of surviving over time_. To do this we'll use the `survfit` function that's part of the survival package that comes with R.
 
-The `survfit` function creates survival curves using model notation similar to `lm` and `glm`. In this case we want to model time_to_death_90D as a function of p-change, the grouping variable we just created. The only difference is we need to create a _survival object_ for our response variable using the `Surv` function. It takes two arguments: the variable we're modeling (time_to_death_90D) and the condition that defines the event of interest (Death_90D=="Yes").
+The `survfit` function creates survival curves using model notation similar to `lm` and `glm`. In this case we want to model `time_to_death_90D` as a function of `p_change`, the grouping variable we just created. The only difference is we need to create a _survival object_ for our response variable using the `Surv` function. It takes two arguments: 
+
+1. the variable we're modeling (`time_to_death_90D`) and,
+2. the condition that defines the event of interest (`Death_90D=="Yes"`).
 
 ```{r}
 library(survival)
@@ -520,6 +491,8 @@ surv.group <- survfit(Surv(time_to_death_90D, Death_90D=="Yes") ~ p_change,
                       data = d)
 surv.group
 ```
+
+The median time to death for Group 3 (phosphate increase) was 2 days with a 95% CI of (1.6, 3.0).
 
 Now we can create the plot by calling `plot` on the surv.group object we created. Note: we need to run the entire chunk of code.
 
@@ -529,34 +502,47 @@ legend("topright",c("Group 1", "Group 2", "Group 3"), lty = 1:3)
 
 ```
 
+To create a ggplot version you can use the survminer package.
+
+```{r}
+# install.packages("survminer")
+library(survminer)
+ggsurvplot(surv.group) +
+  labs(x = "Days", y = "Proportion survival")
+
+```
+
 
 The Phosphate increase group (Group 3) has about a 30% chance of survival to 20 days.
 
-Is there a difference in the survival curves? We can use the _log-rank test_ to assess this by way of the `survdiff` function. The null hypothesis is no difference in survival curves. The small p-value provides against the null hypothesis.
+Is there a difference in the survival curves? We can use the _log-rank test_ to assess this by way of the `survdiff` function. The null hypothesis is no difference in survival curves. A small p-value provides evidence against the null hypothesis.
 
 ```{r}
 survdiff(Surv(time_to_death_90D, Death_90D=="Yes") ~ p_change,
-                      data = d)
+         data = d)
 ```
 
-Figure 3 in the paper shows pairwise comparisons between the curves. The results can be replicated by simply subsetting data to compare two groups at a time. For example, Group 1 versus Group 2:
+The p-value is reported as 1e-04, or 0.0001. We have good evidence the survival curves are indeed different.
+
+Figure 3 in the paper shows _pairwise comparisons_ between the curves. The results can be replicated by simply subsetting data to compare two groups at a time. For example, Group 1 versus Group 2:
 
 ```{r}
 survdiff(Surv(time_to_death_90D, Death_90D=="Yes") ~ p_change,
-                      data = d, subset = p_change != "Group 3")
+         data = d, subset = p_change != "Group 3")
 ```
 
 
 ## Survival analysis example: Cox proportional hazards model
 
-The paper states "To delineate the association between phosphate and mortality, we constructed stepwise multivariable Cox models. In all three models, phosphate levels were significantly associated with an increased risk of death. The fully adjusted model (model 3) revealed that the HRs for 90-day mortality was (per 1 mg/dL increase, 95% CI, 1.02–1.08; P = 0.001) (Table 3)."
+The paper states "To delineate the association between phosphate and mortality, we constructed stepwise multivariable Cox models. In all three models, phosphate levels were significantly associated with an increased risk of death. The fully adjusted model (model 3) revealed that the HRs for 90-day mortality was 1.05 (per 1 mg/dL increase, 95% CI, 1.02–1.08; P = 0.001) (Table 3)."
 
 _Stepwise_ is a form of variable selection that automatically finds the "best" model given lots of candidate predictors. It is frowned upon by many statisticians for many reasons.
 
 HR means _hazard ratio_. A hazard ratio measures how often an event happens in one group compared to how often it happens in another group, over time. A hazard ratio of 1.05 suggests that every one unit increase in phosphate level is associated with 5% increase in the risk of death.
 
-_The fully adjusted model_ in this case is the 
+_The fully adjusted model_, or Model 3, includes phosphate level, age, sex, BMI at ICU admission, CCI, SOFA score, and urine output. (Model 1 just included phosphate; Model 2 included phosphate, age, sex and BMI.) 
 
+Let's replicate this analysis and compare to Table 3.
 
 ```{r}
 coxm <- coxph(Surv(time_to_death_90D, Death_90D=="Yes") ~ P_0h + 
@@ -565,4 +551,7 @@ coxm <- coxph(Surv(time_to_death_90D, Death_90D=="Yes") ~ P_0h +
 summary(coxm)
 
 ```
+
+The second section contains the hazard ratios, which can be obtained by exponentiating the model coefficients.
+
 
