@@ -38,14 +38,21 @@ Today we'll continue working with the following data:
 
 Jung, Su-Young J et al. (2019), Data from: Phosphate is a potential biomarker of disease severity and predicts adverse outcomes in acute kidney injury patients undergoing continuous renal replacement therapy, Dryad, Dataset, https://doi.org/10.5061/dryad.6v0j9
 
-We can load the data directly from a URL. This is useful if you keep your on a version control service such as GitHub. Below we read in the `rds` version of our data, which is the native R format for storing an object. To di this we use the `readRDS` function. And since we're reading from a URL, we need to use the `url` function to open a connection to the web site. 
+We can load the data directly from a URL. This is useful if you keep your on a version control service such as GitHub. Below we read in the `rds` version of our data, which is the native R format for storing an object. To do this we use the `readRDS` function. And since we're reading from a URL, we need to use the `url` function to open a connection to the web site. 
 
 ```{r}
 link <- "https://github.com/clayford/biostats_program/raw/main/crrt.rds"
 d <- readRDS(url(link))
 ```
 
-The study endpoint was _death that occurred within 28 and 90 days of continuous renal replacement therapy (CRRT) initiation_. CRRT is used to provide renal support for critically ill patients with acute kidney injury (AKI). The authors were interested in whether or not patients died within 28 or 90 days, and if so, how long did they survive with CRRT. This is contained in the `Death_28D`, `Death_90B`, `time_to_death_28D`, and `time_to_death_90D` variables. They were also interested in how phosphate levels affected whether or not someone died. This is contained in the `P_0h` and `P_24h` variables. A normal phosphate level is 2.5 to 4.5 mg/dL
+The study endpoint was _death that occurred within 28 and 90 days of continuous renal replacement therapy (CRRT) initiation_. CRRT is used to provide renal support for critically ill patients with acute kidney injury (AKI). The authors were interested in whether or not patients died within 28 or 90 days, and if so, how long did they survive with CRRT. This is contained in 
+
+- `Death_28D`
+- `Death_90B`
+- `time_to_death_28D`
+- `time_to_death_90D` 
+
+They were also interested in how phosphate levels affected whether or not someone died. This is contained in the `P_0h` and `P_24h` variables. A normal phosphate level is 2.5 to 4.5 mg/dL
 
 `summary` and `hist` are fantastic for quick glances at your data.
 
@@ -65,6 +72,7 @@ This is called a _two-sided_ test since our alternative does not specify which g
 
 Example: Compare proportion of 90 day survivors and non-survivors with myocardial infarction (heart attack). Reminder: Insert pipe operator `%>%` with *Ctrl+Shift+M* (Win/Linux) or *Cmd+Shift+M* (Mac)
 
+The `xtabs` function creates a cross-tabulation of two categorical variables. The tilde (~) can be read as "by": create a cross tab _by_ Death_90D and MI. Then we calculate proportions along the rows (or within each level of Death_90D). Then we round to 2 decimal places.
 
 ```{r}
 xtabs(~ Death_90D + MI, data = d) %>% 
@@ -149,7 +157,7 @@ Base R has a number of hypothesis test functions. Here are a few:
 - `prop.test`: compare two proportions
 - `chisq.test`: association between categorical variables
 - `t.test`: compare two means
-- `oneway.test`: compare more than two means
+- `oneway.test`: compare more than two means 
 - `cor.test`: linear association between numeric variables
 - `wilcox.test`: compare ranks between two groups
 - `kruskal.test`: compare ranks between more than two groups
@@ -167,11 +175,9 @@ APACHE II and SOFA scores are measures of disease severity.
 - Acute Physiology and Chronic Health Evaluation (APACHE II) 
 - Sequential Organ Failure Assessment (SOFA) 
 
-Correlation summarizes the strength and direction of a linear relationship and ranges from -1 to 1. This image from Wikipedia does a nice job of describing what correlation measures.
+Correlation summarizes the strength and direction of a linear relationship and ranges from -1 to 1. This image from Wikipedia does a nice job of describing what correlation measures:
 
 https://en.wikipedia.org/wiki/Correlation_and_dependence#/media/File:Correlation_examples2.svg
-
-![](Correlation_examples2.svg.png)
 
 A correlation test tests the null hypothesis that the correlation is different from 0.
 
@@ -211,6 +217,7 @@ Let's reproduce the correlation between phosphate level and the SOFA score:
     - the probability that the alternative hypothesis is NOT true **(FALSE)** 
     - smaller p-values mean bigger effects **(FALSE)**
     
+
 ## Confidence intervals
 
 A _statistic_ calculated from a sample is just an estimate of some population _parameter_. For example, mean height calculated from a sample of 30 UVA male undergraduate students is an estimate of the population mean height. Different samples will almost certainly yield different estimates. A _confidence interval_ gives us some idea of how uncertain we are about an estimate. It provides a lower and upper bound for our estimate. Traditionally we calculate 95% confidence intervals. 
@@ -266,6 +273,8 @@ t.test(APA_II_CRRT_0h ~ Death_90D, data = d)
 Notice the confidence interval is (-4.3, -2.2). We're pretty confident the mean difference is somewhere in that range. 
 
 Note: The internet tells us that "The APACHE II score ranges from 0 to 71 points; however, it is rare for any patient to accumulate more than 55 points." 
+
+
 ## Let's code: confidence interval
 
 The article also reports a significant difference in mean SOFA scores between survivors and non-survivors (Table 1) using a t-test. Let's reproduce the result and get a 95% confidence interval
@@ -275,6 +284,7 @@ The article also reports a significant difference in mean SOFA scores between su
 ```
 
 Note: The internet tells us that "The SOFA score ranges from 0 to 24 points."
+
 
 ## Linear Model basics
 
@@ -656,10 +666,69 @@ Let's reproduce model 1 of 28 day mortality as reported in Table 3.
 We're done! That's enough stats!
 
 
+## Resources
+
+Want to learn more stats and R? I suggest working through some books. openintro.org has some good free books. The books also include labs that use R. 
+
+Open Intro Statistics
+https://www.openintro.org/book/os/
+
+Introduction to Modern Statistics
+https://www.openintro.org/book/ims/
+
+Introduction to Statistics for the Life and Biomedical Sciences 
+https://www.openintro.org/book/biostat/
+
 
 ## Appendix
 
-Material we probably won't get to and is frankly over-and-above what is reasonable to cover in a 2-hour class on "statistics methods".
+Deleted scenes! Material we didn't have time for in class. But I encourage to read through this.
+
+## Testing the normality assumption
+
+From the article: "Variables that did not show normal distribution were compared using Mann-Whitney test or Kruskal-Wallis test. The Kolmogorov-Smirnov test was used to examine the normality of the distribution of parameters."
+
+When comparing two or more group means using t-tests and one-way ANOVA tests, we assume the parent populations for each group is _approximately normal_. If we suspect that assumption is severely violated we can resort to the Mann-Whitney test and Kruskal-Wallis tests, which only assume the parent populations for each group are _the same_. 
+
+- t-test --> Wilcoxoc-Mann-Whitney
+- one-way ANOVA --> Kruskal-Wallis
+
+The Kolmogorov-Smirnov test is one way to test for Normality. The null hypothesis is the distribution is normal. A small p-value provides evidence against that null. The function in base R is `ks.test`.
+
+Let's look at the distribution of white blood cell count (`WBC_0h`) for survivors and non-survivors for `Death_90D`.
+
+```{r}
+ggplot(d) +
+  aes(x = WBC_0h) +
+  geom_histogram(bins = 35) +
+  facet_wrap(~Death_90D)
+```
+
+The No group seems to have a couple of outliers but is otherwise sort of symmetric. The Yes group looks skewed to the right. 
+
+Let's use the ks.test function for each group. We use `tapply` to _apply_ the `ks.test` function to WBC per Death_90D group. We include the `dnorm` argument to tell `ks.test` we're testing for normality. Notice the warning about ties. Both tests feature p-values that are virtually 0.
+
+```{r}
+tapply(d$WBC_0h, d$Death_90D, ks.test, dnorm)
+```
+
+Another test is the Shapiro-Wilk test, `shapiro.test`. It doesn't care if there are ties.
+
+```{r}
+tapply(d$WBC_0h, d$Death_90D, shapiro.test)
+
+```
+
+It, too, rejects the null of normality. Therefore we may wish to compare the groups using the Wilcoxon-Mann-Whitney test using the `wilcox.test` function.
+
+```{r}
+wilcox.test(WBC_0h ~ Death_90D, data = d)
+```
+
+The null is both samples were drawn from the same distribution. A low p-value rejects this null. 
+
+Editorial: The t-test and one-way-test, and indeed any linear model, is very robust to departures from normality. With group sizes of 323 and 821, respectively, I wouldn't be terribly concerned about it. Technically the normality assumption is on the distribution of _residuals_, not the populations. 
+
 
 ## Testing the proportional hazards assumption
 
@@ -679,4 +748,29 @@ ph <- cox.zph(coxm)
 plot(ph, var = "CCI")
 plot(ph, var = "SOFA_CRRT_0h")
 ```
+
+
+## Creating Table 1
+
+Here's how we can sort of reproduce Table 1 using the tableone package. The `v` vector contains the names of the variables we want to include. The `cv` vector contains the categorical variables. The `nn` vector contains WBC, which is non-normal. Finally the `CreateTableOne` function creates a table stratified by "Death_90D". The print out is quite extensive. We can export the plot to CSV for further editing using `write.csv`.
+
+```{r}
+# install.packages("tableone")
+library(tableone)
+v <- c("Age", "Sex", "HTN", "DM", "CHF", "MI", "Cerevascular_dis",
+       "COPD", "MV_CRRT", "CCI", "AKIcause", "CRRTcause", "AKIN", "BMI_ICU",
+       "SOFA_CRRT_0h", "APA_II_CRRT_0h", "SBP_0h", "DBP_0h", "MAP_0h", 
+       "Hb_0h", "WBC_0h", "alb_0h", "K_0h", "tCO2_0h", "BUN_0h", "P_0h",
+       "Cr_0h", "CRRT_dose", "CRP_0h")
+cv <- c("Sex", "HTN", "DM", "CHF", "MI", "Cerevascular_dis",
+       "COPD", "MV_CRRT", "AKIcause", "CRRTcause", "AKIN")
+nn <- "WBC_0h"
+tab1 <- CreateTableOne(vars = v, strata = "Death_90D" , data = d, 
+                       factorVars = cv, addOverall = TRUE)
+print(tab1, nonnormal = nn)
+
+# Export table to CSV for some fine-tuning
+write.csv(tab1, file = "TableOne.csv")
+```
+
 
