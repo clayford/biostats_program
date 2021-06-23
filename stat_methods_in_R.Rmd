@@ -5,6 +5,9 @@ editor_options:
   chunk_output_type: inline
 ---
 
+## Who's leading this session?
+
+I'm Clay Ford. I work in the UVA Library as a Statistical Research Consultant. I provide free statistics consulting to students and faculty. I've been with UVA since 2013. 
 
 ## Agenda
 
@@ -52,12 +55,12 @@ The study endpoint was _death that occurred within 28 and 90 days of continuous 
 - `time_to_death_28D`
 - `time_to_death_90D` 
 
-They were also interested in how phosphate levels affected whether or not someone died. This is contained in the `P_0h` and `P_24h` variables. A normal phosphate level is 2.5 to 4.5 mg/dL
+They were also interested in how phosphate levels affected whether or not someone died. This is contained in the `P_0h` and `P_24h` variables. A normal phosphate level is 2.5 to 4.5 mg/dL.
 
 `summary` and `hist` are fantastic for quick glances at your data.
 
 ```{r}
-# call summary and hist on Death_90D, time_to_death_90D, and P_0h
+# call summary and/or hist on P_0h, Death_90D, time_to_death_90D
 
 ```
 
